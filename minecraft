@@ -471,7 +471,7 @@ mc_say() {
 }
 
 mc_time() {
-  say_string="$(date '+%a %m/%d/%Y %r')"
+  say_string="$(date '+%a %m/%d/%Y %X')"
   if server_running ; then
     as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"say $say_string\"\015'"
   else

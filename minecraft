@@ -50,25 +50,22 @@ fi
 ## Settings for minecraft-init-script
 
 # Nice looking name of service for script to report back to users
-SERVERNAME="CraftBukkit"
+SERVERNAME="Techcraft"
 
 # Filename of server binary
-SERVICE="craftbukkit.jar"
-
-# URL of server executable for update checking - http://cbukk.it/craftbukkit.jar is the recommended latest Craftbukkit URL
-SERVER_URL="http://cbukk.it/craftbukkit.jar"
+SERVICE="minecraft_server.jar"
 
 # Username of non-root user who will run the server
-USERNAME="bukkit"
+USERNAME="techmago"
 
 # Path of server binary and world
-MCPATH="/home/bukkit/craftbukkit"
+MCPATH="/dados/minecraft/1.12.1"
 
 # Number of CPU cores to thread across if using multithreaded garbage collection
-CPU_COUNT="2"
+CPU_COUNT="4"
 
 # Where backups go
-BACKUPPATH="/home/bukkit/backups"
+BACKUPPATH="/dados/minecraft/backups"
 
 # How many days worth of backups to keep (default 7)
 BACKUPS_TO_KEEP="7"
@@ -79,17 +76,17 @@ SCRNAME="minecraft"
 ## The Java command to run the server, uncomment one INVOCATION line only!
 
 # Nothing special, just start the server with 1Gb RAM
-# INVOCATION="java -Xms1024M -Xmx1024M -Djava.net.preferIPv4Stack=true -jar $SERVICE nogui"
+# INVOCATION="java -Xms1024M -Xmx1024M -Djava.net.preferIPv4Stack=true -jar ${SERVICE} nogui"
 
 # This is what I run my server with, tune your RAM usage accordingly
 # Tested fastest GC - Default parallel new gen collector, plus parallel old gen collector
-INVOCATION="java -Xms1024M -Xmx1024M -Djava.net.preferIPv4Stack=true -XX:MaxPermSize=128M -XX:UseSSE=3 -XX:-DisableExplicitGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=$CPU_COUNT -XX:+AggressiveOpts -XX:+UseCompressedStrings -jar $SERVICE nogui"
+INVOCATION="java -Xms1024M -Xmx3048M -Djava.net.preferIPv4Stack=true -XX:UseSSE=3 -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:+CMSIncrementalPacing -XX:ParallelGCThreads=$CPU_COUNT -XX:+AggressiveOpts -jar ${SERVICE} nogui"
 
 # I removed these "performance" commands as I don't see any difference with them
 # -XX:+UseFastAccessorMethods -XX:+UseAdaptiveGCBoundary
 
 # I've had a suggestion from a Java tuning engineer to use these
-# -XX:+AggressiveOpts -XX:+UseCompressedStrings
+# -XX:+AggressiveOpts
 
 # Add HugePage support if you have it configured on the OS
 # You should be using HugePages if you give more than 4Gb on the Java invocation line
@@ -130,10 +127,10 @@ fi
 ## Get some more info from the settings file
 
 # Find the world name from the existing server file
-WORLDNAME="$(grep -E 'level-name' $MCPATH/server.properties | sed -e s/.*level-name=//)"
+WORLDNAME="$(grep -E 'level-name' ${MCPATH}/server.properties | sed -e s/.*level-name=//)"
 
 # Find the port number from the existing server file
-SERVERPORT="$(grep -E 'server-port' $MCPATH/server.properties | sed -e s/.*server-port=//)"
+SERVERPORT="$(grep -E 'server-port' ${MCPATH}/server.properties | sed -e s/.*server-port=//)"
 
 ## Runs all commands as the non-root user
 
@@ -151,19 +148,19 @@ as_user() {
 
 server_running() {
   # Get the PID of the running Screen session:
-  # ps, remove grep, look for screen, look for the screen session $SCRNAME to differentiate between multiple servers, awk out everything but the pid
+  # ps, remove grep, look for screen, look for the screen session ${SCRNAME} to differentiate between multiple servers, awk out everything but the pid
   SCREENPID=""
-  SCREENPID="$(ps -ef | grep -v grep | grep -i screen | grep $SCRNAME | awk '{print $2}')"
-  # if the screen session with $SCRNAME is not running, then the server is not running, so we return 1 and exit the function
-  if [ -z "$SCREENPID" ]
+  SCREENPID="$(ps -ef | grep -v grep | grep -i screen | grep ${SCRNAME} | awk '{print $2}')"
+  # if the screen session with ${SCRNAME} is not running, then the server is not running, so we return 1 and exit the function
+  if [ -z "${SCREENPID}" ]
   then
    return 1
   fi
-  # PID="$(ps -ef | grep -v grep | grep -i screen | grep $SCRNAME | awk '{print $2}' | xargs ps -f --ppid | grep $SERVICE | awk '{print $2}')"
-  # use the screen session pid to get the parent pid, which is the actual pid of the java process, check that process is actually $SERVICE
-  JAVAPID="$(ps -f --ppid $SCREENPID | grep $SERVICE | awk '{print $2}')"
+  # PID="$(ps -ef | grep -v grep | grep -i screen | grep ${SCRNAME} | awk '{print $2}' | xargs ps -f --ppid | grep ${SERVICE} | awk '{print $2}')"
+  # use the screen session pid to get the parent pid, which is the actual pid of the java process, check that process is actually ${SERVICE}
+  JAVAPID="$(ps -f --ppid ${SCREENPID} | grep ${SERVICE} | awk '{print $2}')"
   # if the java process is not running, then the server is not running, so we return 1 to exit the function
-  if [ -z "$JAVAPID" ]
+  if [ -z "${JAVAPID}" ]
   then
     return 1
   fi
@@ -176,20 +173,20 @@ server_running() {
 mc_start() {
   if server_running
   then
-    echo " * [ERROR] $SERVERNAME was already running (pid $JAVAPID). Not starting!"
+    echo " * [ERROR] ${SERVERNAME} was already running (pid ${JAVAPID}). Not starting!"
     exit 1
   else
-    echo " * $SERVERNAME was not already running. Starting..."
-    echo " * Using map named \"$WORLDNAME\"..."
-    as_user "cd \"$MCPATH\" && screen -c /dev/null -dmS $SCRNAME $INVOCATION"
-    echo " * Checking $SERVERNAME is running..."
+    echo " * ${SERVERNAME} was not already running. Starting..."
+    echo " * Using map named \"${WORLDNAME}\"..."
+    as_user "cd ${MCPATH} && screen -c /dev/null -dmS ${SCRNAME} ${INVOCATION}"
+    echo " * Checking ${SERVERNAME} is running..."
 
     # start a counter and check for 15 seconds if the server is running or not
     COUNT=0
     while [ $COUNT -lt 15 ]; do
       if server_running
       then
-        echo " * [OK] $SERVERNAME is now running (pid $JAVAPID)."
+        echo " * [OK] ${SERVERNAME} is now running (pid ${JAVAPID})."
 	exit 0
       else
         let COUNT=COUNT+1
@@ -197,7 +194,7 @@ mc_start() {
       fi
     done
     # if we've reached here, the server hasn't started in 15 seconds
-    echo " * [ERROR] Could not start $SERVERNAME."
+    echo " * [ERROR] Could not start ${SERVERNAME}."
     exit 1
   fi
 }
@@ -207,20 +204,20 @@ mc_start() {
 mc_stop() {
   if server_running
   then
-    echo " * $SERVERNAME is running (pid $JAVAPID). Commencing shutdown..."
+    echo " * ${SERVERNAME} is running (pid ${JAVAPID}). Commencing shutdown..."
     echo " * Notifying users of shutdown..."
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"say SERVER SHUTTING DOWN IN 10 SECONDS. Saving map...\"\015'"
-    echo -n " * Saving map named \"$WORLDNAME\" to disk"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"save-all\"\015'"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"say SERVER SHUTTING DOWN IN 10 SECONDS. Saving map...\"\015'"
+    echo -n " * Saving map named \"${WORLDNAME}\" to disk"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"save-all\"\015'"
 
     # start a counter and check for 20 seconds for when the world has saved
     COUNT=0
     while [ $COUNT -lt 10 ]; do
       echo -n "."
       sleep 2
-      if [ -f "$MCPATH/logs/latest.log" ]
+      if [ -f "${MCPATH}/logs/latest.log" ]
       then
-        if [[ "$(tail -n 20 $MCPATH/logs/latest.log | grep -E 'Save complete|Saved the world' | wc -l)" -gt 0 ]]; then
+        if [[ "$(tail -n 20 ${MCPATH}/logs/latest.log | grep -E 'Save complete|Saved the world' | wc -l)" -gt 0 ]]; then
           COUNT=99
         fi
       fi
@@ -228,12 +225,12 @@ mc_stop() {
     done
     echo ""
 
-    echo -n " * Stopping $SERVERNAME"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"stop\"\015'"
+    echo -n " * Stopping ${SERVERNAME}"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"stop\"\015'"
 
     # start a counter and check for 15 seconds if the server is running or not
     COUNT=0
-    while [ $COUNT -lt 15 ]; do
+    while [ ${COUNT} -lt 15 ]; do
       if server_running
       then
         echo -n "."
@@ -241,16 +238,16 @@ mc_stop() {
         sleep 1
       else
         echo ""
-        echo " * [OK] $SERVERNAME is shut down."
-        exit 0
+        echo " * [OK] ${SERVERNAME} is shut down."
+        return 0
       fi
     done
     echo ""
     # if we've reached here, the server hasn't stopped in 15 seconds
-    echo " * [ERROR] $SERVERNAME is still running (pid $JAVAPID). Could not be shutdown!"
+    echo " * [ERROR] ${SERVERNAME} is still running (pid ${JAVAPID}). Could not be shutdown!"
     exit 1
   else
-    echo " * [OK] $SERVERNAME is shut down."
+    echo " * [OK] ${SERVERNAME} is shut down."
   fi
 }
 
@@ -259,18 +256,18 @@ mc_stop() {
 mc_saveoff() {
   if server_running
   then
-    echo " * $SERVERNAME is running. Commencing save..."
+    echo " * ${SERVERNAME} is running. Commencing save..."
     echo " * Notifying users of save..."
-    as_user "screen -p 0 -S $SCRNAME  -X eval 'stuff \"say SERVER BACKUP STARTING. Server going read-only...\"\015'"
+    as_user "screen -p 0 -S ${SCRNAME}  -X eval 'stuff \"say SERVER BACKUP STARTING. Server going read-only...\"\015'"
     echo " * Setting server read-only..."
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"save-off\"\015'"
-    echo " * Saving map named \"$WORLDNAME\" to disk..."
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"save-all\"\015'"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"save-off\"\015'"
+    echo " * Saving map named \"${WORLDNAME}\" to disk..."
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"save-all\"\015'"
     sync
     sleep 10
     echo " * [OK] Map saved."
   else
-    echo " * [INFO] $SERVERNAME was not running. Not suspending saves."
+    echo " * [INFO] ${SERVERNAME} was not running. Not suspending saves."
   fi
 }
 
@@ -279,54 +276,11 @@ mc_saveoff() {
 mc_saveon() {
   if server_running
   then
-    echo " * $SERVERNAME is running. Re-enabling saves..."
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"say SERVER BACKUP ENDED. Server going read-write...\"\015'"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"save-on\"\015'"
+    echo " * ${SERVERNAME} is running. Re-enabling saves..."
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"say SERVER BACKUP ENDED. Server going read-write...\"\015'"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"save-on\"\015'"
   else
-    echo " * [INFO] $SERVERNAME was not running. Not resuming saves."
-  fi
-}
-
-## Checks for update, exits if update not required, updates if the server is not running
-
-mc_updatecheck() {
-  echo " * Downloading latest $SERVERNAME executable..."
-  as_user "cd \"$MCPATH\" && curl -# -L -o \"$MCPATH/$SERVICE.update\" \"$SERVER_URL\""
-
-  if [ -f "$MCPATH/$SERVICE.update" ]
-  then
-    echo " * Checking downloaded update against existing server..."
-
-    if $(diff "$MCPATH/$SERVICE" "$MCPATH/$SERVICE.update" >/dev/null)
-    then
-      echo " * You are already running the latest version of $SERVERNAME!"
-      exit 0; # keep this exit in as we don't need to do anything
-    fi
-
-  else
-    echo " * [ERROR] $SERVERNAME update could not be downloaded."
-    exit 1
-  fi
-
-  if server_running
-  then
-    echo " * $SERVERNAME is running (pid $JAVAPID). Shutting down for update..."
-  else
-    as_user "/bin/cp \"$MCPATH/$SERVICE.update\" \"$MCPATH/$SERVICE\""
-    echo " * [OK] $SERVERNAME successfully updated."
-  fi
-}
-
-## Actually do the executable update
-
-mc_updatedo() {
-  if server_running
-  then
-    echo " * [ERROR] $SERVICE is still running (pid $JAVAPID). Cannot update!"
-    exit 1
-  else
-    as_user "/bin/cp \"$MCPATH/$SERVICE.update\" \"$MCPATH/$SERVICE\""
-    echo " * [OK] $SERVERNAME successfully updated."
+    echo " * [INFO] ${SERVERNAME} was not running. Not resuming saves."
   fi
 }
 
@@ -336,11 +290,11 @@ mc_checkbackup() {
   if [ -n "$1" ]
     then
     WORLDNAME="$1"
-      if [ -d "$MCPATH/$WORLDNAME" ]
+      if [ -d "${MCPATH}/${WORLDNAME}" ]
         then
-        echo " * Found world named \"$MCPATH/$WORLDNAME\""
+        echo " * Found world named \"${MCPATH}/${WORLDNAME}\""
       else
-        echo " * Could not find world named \"$MCPATH/$WORLDNAME\""
+        echo " * Could not find world named \"${MCPATH}/${WORLDNAME}\""
         exit 1
       fi
   fi
@@ -349,34 +303,34 @@ mc_checkbackup() {
 ## Backs up map by rsyncing current world to backup location, creates tar.gz with datestamp
 
 mc_backupmap() {
-  echo " * Backing up $SERVERNAME map named \"$WORLDNAME\"..."
-  echo " * Syncing \"$MCPATH/$WORLDNAME\" to \"$BACKUPPATH/$WORLDNAME\""
-  as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"$MCPATH/$WORLDNAME\" \"$BACKUPPATH\""
+  echo " * Backing up ${SERVERNAME} map named \"${WORLDNAME}\"..."
+  echo " * Syncing \"${MCPATH}/${WORLDNAME}\" to \"$BACKUPPATH/${WORLDNAME}\""
+  as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"${MCPATH}/${WORLDNAME}\" \"$BACKUPPATH\""
   # if the nether exists, back it up
-  WORLDNETHER="$WORLDNAME""_nether"
-  if [ -d "$MCPATH/$WORLDNETHER" ]
+  WORLDNETHER="${WORLDNAME}""_nether"
+  if [ -d "${MCPATH}/$WORLDNETHER" ]
     then
-    echo " * Syncing \"$MCPATH/$WORLDNETHER\" to \"$BACKUPPATH/$WORLDNETHER\""
-  as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"$MCPATH/$WORLDNETHER\" \"$BACKUPPATH\""
+    echo " * Syncing \"${MCPATH}/$WORLDNETHER\" to \"$BACKUPPATH/$WORLDNETHER\""
+  as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"${MCPATH}/$WORLDNETHER\" \"$BACKUPPATH\""
   else
-    echo " * \"$MCPATH/$WORLDNETHER\" doesn't exist, skipping."
+    echo " * \"${MCPATH}/$WORLDNETHER\" doesn't exist, skipping."
   fi
   # if the end exists, back it up
-  WORLDTHEEND="$WORLDNAME""_the_end"
-  if [ -d "$MCPATH/$WORLDTHEEND" ]
+  WORLDTHEEND="${WORLDNAME}""_the_end"
+  if [ -d "${MCPATH}/$WORLDTHEEND" ]
     then
-    echo " * Syncing \"$MCPATH/$WORLDTHEEND\" to \"$BACKUPPATH/$WORLDTHEEND\""
-    as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"$MCPATH/$WORLDTHEEND\" \"$BACKUPPATH\""
+    echo " * Syncing \"${MCPATH}/$WORLDTHEEND\" to \"$BACKUPPATH/$WORLDTHEEND\""
+    as_user "rsync --checksum --group --human-readable --copy-links --owner --perms --recursive --times --update --delete \"${MCPATH}/$WORLDTHEEND\" \"$BACKUPPATH\""
   else
-    echo " * \"$MCPATH/$WORLDTHEEND\" doesn't exist, skipping."
+    echo " * \"${MCPATH}/$WORLDTHEEND\" doesn't exist, skipping."
   fi
   sleep 10
   echo " * Creating compressed backup..."
   NOW="$(date +%Y-%m-%d.%H-%M-%S)"
   # Create a compressed backup file and background it so we can get back to restarting the server
   # You can tell when the compression is done as it makes an md5sum file of the backup
-  as_user "cd "$BACKUPPATH" && tar cfz \""$WORLDNAME"_backup_"$NOW".tar.gz\" \"$WORLDNAME\" && md5sum \""$WORLDNAME"_backup_"$NOW".tar.gz\" > \""$WORLDNAME"_backup_"$NOW".tar.gz.md5\" &"
-  echo " * [OK] Backed up map \"$WORLDNAME\"."
+  as_user "cd "$BACKUPPATH" && tar cfz \""${WORLDNAME}"_backup_"$NOW".tar.gz\" \"${WORLDNAME}\" && md5sum \""${WORLDNAME}"_backup_"$NOW".tar.gz\" > \""${WORLDNAME}"_backup_"$NOW".tar.gz.md5\" &"
+  echo " * [OK] Backed up map \"${WORLDNAME}\"."
   # if we backed up the nether, create a backup of that too
   if [ -d "$BACKUPPATH/$WORLDNETHER" ]
     then
@@ -395,9 +349,9 @@ mc_backupmap() {
 ## Backs up executable by copying it to backup location
 
 mc_backupexe() {
-  echo " * Backing up the $SERVERNAME server executable..."
+  echo " * Backing up the ${SERVERNAME} server executable..."
   NOW="$(date +%Y-%m-%d.%H-%M-%S)"
-  as_user "cp \""$MCPATH"/"$SERVICE"\" \""$BACKUPPATH"/"$SERVICE"_backup_"$NOW".jar\""
+  as_user "cp \""${MCPATH}"/"${SERVICE}"\" \""$BACKUPPATH"/"${SERVICE}"_backup_"$NOW".jar\""
   echo " * [OK] Backed up executable."
 }
 
@@ -414,16 +368,16 @@ mc_removeoldbackups() {
 mc_logrotate() {
   # Define a function to copy the old logfile to the new
   mc_copylog() {
-    as_user "/bin/cp $logfile $MCPATH/$LOGNEW"
+    as_user "/bin/cp ${logfile} ${MCPATH}/$LOGNEW"
   }
 
   # Server logfiles in chronological order
-  LOGLIST="$(ls -r $MCPATH/server.log* | grep -v lck)"
+  LOGLIST="$(ls -r ${MCPATH}/server.log* | grep -v lck)"
   # How many logs to keep
   COUNT="6"
   # Look at all the logfiles
   for logfile in $LOGLIST; do
-    LOGTMP="$(basename $logfile | cut -d '.' -f 3)"
+    LOGTMP="$(basename ${logfile} | cut -d '.' -f 3)"
     # If we're working with server.log then append .1
     if [ -z "$LOGTMP" ]
     then
@@ -433,16 +387,16 @@ mc_logrotate() {
     elif [ "$LOGTMP" -gt "$COUNT" ]
     then
       # If so, delete it
-      as_user "rm -f $logfile"
+      as_user "rm -f ${logfile}"
     else
       # Otherwise, add one to the number
-      LOGBASE="$(basename $logfile | cut -d '.' -f 1-2)"
+      LOGBASE="$(basename ${logfile} | cut -d '.' -f 1-2)"
       LOGNEW="$LOGBASE.$(($LOGTMP+1))"
       mc_copylog
     fi
   done
   # Blank the existing logfile to renew it
-  as_user "echo -n \"\" > $MCPATH/server.log"
+  as_user "echo -n \"\" > ${MCPATH}/server.log"
 }
 
 ## Check if server is running and display PID
@@ -450,9 +404,9 @@ mc_logrotate() {
 mc_status() {
   if server_running
   then
-    echo " * $SERVERNAME status: Running (pid $JAVAPID)."
+    echo " * ${SERVERNAME} status: Running (pid ${JAVAPID})."
   else
-    echo " * $SERVERNAME status: Not running."
+    echo " * ${SERVERNAME} status: Not running."
     exit 1
   fi
 }
@@ -462,42 +416,40 @@ mc_status() {
 mc_info() {
   if server_running
   then
-    RSS="$(ps --pid $JAVAPID --format rss | grep -v RSS)"
+    RSS="$(ps --pid ${JAVAPID} --format rss | grep -v RSS)"
     echo " - Java Path          : $(readlink -f $(which java))"
-    echo " - Start Command      : $INVOCATION"
-    echo " - Server Path        : $MCPATH"
-    echo " - World Name         : $WORLDNAME"
-    echo " - Process ID         : $JAVAPID"
-    echo " - Screen Session     : $SCRNAME"
+    echo " - Start Command      : ${INVOCATION}"
+    echo " - Server Path        : ${MCPATH}"
+    echo " - World Name         : ${WORLDNAME}"
+    echo " - Process ID         : ${JAVAPID}"
+    echo " - Screen Session     : ${SCRNAME}"
     echo " - Memory Usage       : $((RSS/1024)) Mb ($RSS kb)"
-  # Check for HugePages support in kernel, display statistics if HugePages are available, otherwise skip
-  if [ -n "$(grep HugePages_Total /proc/meminfo | awk '{print $2}')" -a "$(grep HugePages_Total /proc/meminfo | awk '{print $2}')" ]
-  then
-    HP_SIZE="$(grep Hugepagesize /proc/meminfo | awk '{print $2}')"
-    HP_TOTAL="$(grep HugePages_Total /proc/meminfo | awk '{print $2}')"
-    HP_FREE="$(grep HugePages_Free /proc/meminfo | awk '{print $2}')"
-    HP_RSVD="$(grep HugePages_Rsvd /proc/meminfo | awk '{print $2}')"
-    HP_USED="$((HP_TOTAL-HP_FREE+HP_RSVD))"
-    TOTALMEM="$((RSS+(HP_USED*HP_SIZE)))"
-    echo " - HugePage Usage     : $((HP_USED*(HP_SIZE/1024))) Mb ($HP_USED HugePages)"
-    echo " - Total Memory Usage : $((TOTALMEM/1024)) Mb ($TOTALMEM kb)"
-  fi
+    # Check for HugePages support in kernel, display statistics if HugePages are available, otherwise skip
+	  if [ -n "$(grep HugePages_Total /proc/meminfo | awk '{print $2}')" -a "$(grep HugePages_Total /proc/meminfo | awk '{print $2}')" ] ; then
+	    HP_SIZE="$(grep Hugepagesize /proc/meminfo | awk '{print $2}')"
+	    HP_TOTAL="$(grep HugePages_Total /proc/meminfo | awk '{print $2}')"
+	    HP_FREE="$(grep HugePages_Free /proc/meminfo | awk '{print $2}')"
+	    HP_RSVD="$(grep HugePages_Rsvd /proc/meminfo | awk '{print $2}')"
+	    HP_USED="$((HP_TOTAL-HP_FREE+HP_RSVD))"
+	    TOTALMEM="$((RSS+(HP_USED*HP_SIZE)))"
+	    echo " - HugePage Usage     : $((HP_USED*(HP_SIZE/1024))) Mb ($HP_USED HugePages)"
+	    echo " - Total Memory Usage : $((TOTALMEM/1024)) Mb ($TOTALMEM kb)"
+	  fi
     echo " - Active Connections : "
     netstat --inet -tna | grep -E "Proto|$SERVERPORT"
   else
-    echo " * $SERVERNAME is not running. Unable to give info."
+    echo " * ${SERVERNAME} is not running. Unable to give info."
     exit 1
   fi
 }
- 
+
 ## Connect to the active Screen session, disconnect with Ctrl+a then d
 
 mc_console() {
-  if server_running
-  then
-    as_user "screen -S $SCRNAME -dr"
+  if server_running ; then
+    as_user "screen -S ${SCRNAME} -dr"
   else
-    echo " * [ERROR] $SERVERNAME was not running! Unable to console."
+    echo " * [ERROR] ${SERVERNAME} was not running! Unable to console."
     exit 1
   fi
 }
@@ -506,16 +458,24 @@ mc_console() {
 
 mc_say() {
   say_string="${@:1}"
-  if [[ -z "$say_string" ]]
-  then
+  if [[ -z "$say_string" ]] ; then
     echo " * You need to enter your message. Usage; \"minecraft say message\""
   elif server_running
   then
     echo " * Broadcasting \"$say_string\""
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"say $say_string\"\015'"
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"say $say_string\"\015'"
   else
-    echo " * [ERROR] $SERVERNAME was not running!"
+    echo " * [ERROR] ${SERVERNAME} was not running!"
     exit 1
+  fi
+}
+
+mc_time() {
+  say_string="$(date '+%a %m/%d/%Y %r')"
+  if server_running ; then
+    as_user "screen -p 0 -S ${SCRNAME} -X eval 'stuff \"say $say_string\"\015'"
+  else
+    exit 0
   fi
 }
 
@@ -530,15 +490,7 @@ case "$1" in
  ;;
   restart)
  mc_stop
- sleep 1
- mc_start
- ;;
-  update)
- mc_updatecheck
- mc_stop
- mc_backupmap
- mc_backupexe
- mc_updatedo
+ sleep 5
  mc_start
  ;;
   backup)
@@ -570,17 +522,14 @@ case "$1" in
   save-on)
  mc_saveon
  ;;
-# Debug usage only
-  justbackup) # don't use this while the server is running!!!
- mc_checkbackup
- mc_backupmap
- mc_backupexe
- ;;
   say)
  mc_say "${@:2}"
  ;;
+  time)
+ mc_time
+ ;;
   *)
- echo " * Usage: minecraft {start|stop|restart|backup (worldname)|save-on|save-off|update|status|info|console|say}"
+ echo " * Usage: minecraft {start|stop|restart|backup (worldname)|save-on|save-off|status|info|console|say|time}"
  exit 1
  ;;
 esac

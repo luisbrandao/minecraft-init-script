@@ -1,18 +1,14 @@
 ## minecraft-init-script
 
-by Jamie Bainbridge <<jamie.bainbridge@gmail.com>>
+by Luis Brandão <<techmago@ymail.com>>
 
-This is an initscript to run a Minecraft or CraftBukkit server on CentOS, Fedora, and Ubuntu.
+This is an initscript to run a Minecraft CentOS.
 
-### Note
-
-As of 2015, this script is no longer actively maintained. All the supported distros are moving to systemd, making the concept of an LSB initscript rather outdated. All issues I see are related to bugs in Ubuntu's implementation of Upstart, it works perfectly on CentOS. However I think you are much better learning to use containers like Docker to control a single process and its files. There are many instructions around the internet on how to do this.
-
-Thanks to all supporters over the years. You are welcome to fork this repo if you wish to continue development.
+forked from https://github.com/superjamie/minecraft-init-script
 
 ### Features
 
-*   Start, stop, restart CraftBukkit as a system service
+*   Start, stop, restart Minecraft as a system service
 *   Automatic (via cron) and manual logfile rotation
 *   Automatic (via cron) and manual backups
 *   Backup compression and rotation (keeps 7 days worth of backups)
@@ -23,7 +19,7 @@ Thanks to all supporters over the years. You are welcome to fork this repo if yo
 
 ### Supported Distributions
 
-*   CentOS 6, CentOS 5, Fedora 14 (probably works on Fedora Core 6 and later, untested)
+*   CentOS 7,  CentOS 6, CentOS 5, Fedora 14 (probably works on Fedora Core 6 and later, untested)
 *   Ubuntu Server 12.04 LTS
 
 Other distros which use SysV Init or Upstart will probably work.
@@ -70,29 +66,16 @@ As the root user:
     java -version
     ~~~
 
-*   Create a new user with a home directory
-
-    ~~~
-    useradd -m bukkit
-    ~~~
-    
 *   Save the script as `/etc/init.d/minecraft` and make it executable
 
     ~~~
     chmod +x /etc/init.d/minecraft
     ~~~
-    
+
 *   Copy between the `<<COMMENT` and `COMMENT` lines and place the copy at `/etc/default/minecraft`
 
     If you need to edit settings, edit the `/etc/default/minecraft` file, not the initscript
 
-*   Allow the bukkit user to run the init script without needing root access
-
-    Type `visudo` and add this line to the bottom:
-
-    ~~~
-    bukkit localhost=NOPASSWD:/etc/init.d/minecraft*
-    ~~~
 
 *   Create an alias so you only have to type `minecraft` to run the script
 
@@ -103,7 +86,7 @@ As the root user:
     ~~~
 
 *   Start the server on system boot if desired (CentOS/Fedora)
-  
+
     ~~~
     chkconfig --add minecraft
     chkconfig minecraft on
@@ -123,7 +106,7 @@ As the regular user, bukkit:
     mkdir -p ~/backups && mkdir -p ~/craftbukkit
     ~~~
 
-*   Put your `craftbukkit.jar`, world, plugins, `server.properties`, etc into `~/craftbukkit`
+*   Put your `minecrat_server.jar`, world, plugins, `server.properties`, etc into `~/craftbukkit`
 
 ### Backups
 
@@ -132,9 +115,11 @@ As the regular user, bukkit:
     Type `crontab -e` to open the cron interface and add the following
 
     ~~~
+    */5 * * * * /etc/init.d/minecraft time                # Say the time every 5 minutes
      0 4 * * * /etc/init.d/minecraft backup              # backup world at 4:00am
      5 4 * * * /etc/init.d/minecraft logrotate           # rotate logs at 4:05am
-    15 4 * * * /etc/init.d/minecraft removeoldbackups    # remove old backups at 4:30am
+    15 4 * * * /etc/init.d/minecraft removeoldbackups    # remove old backups at 4:15am
+    20 4 * * * /etc/init.d/minecraft restart             # restart server at at 4:20am
     ~~~
 
 *   If you have multiple worlds, you can pass the worldname as a parameter to the regular backup
@@ -198,7 +183,7 @@ It is possible to run multiple instances, for example a Creative server and a Su
     MCPATH="/home/bukkit/craftbukkit-creative"
     MCPATH="/home/bukkit/craftbukkit-survival"
     ~~~
- 
+
 *   Change your screen session names in each script
 
     ~~~
@@ -292,7 +277,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ### Contributors
 
-*   Jamie Bainbridge <<jamie.bainbridge@gmail.com>>
+*   Luis Brandao
+*   Jamie Bainbridge
 *   Polhemic on GitHub
 *   Mooash on GitHub
 *   Jon Stephens
